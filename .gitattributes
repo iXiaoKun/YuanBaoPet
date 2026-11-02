@@ -1,0 +1,21 @@
+* text=auto
+
+# Keep Git's own config files LF
+.gitattributes text eol=lf
+.gitignore     text eol=lf
+
+# Windows launcher scripts must keep CRLF no matter who clones the repo
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Source and docs stay LF
+*.py  text eol=lf
+*.md  text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+
+# Binaries: never touch
+*.ico binary
+*.png binary
+*.jpg binary
+*.exe binary
