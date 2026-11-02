@@ -31,6 +31,14 @@ class BubbleWidget(QWidget):
         self._font = QFont("Microsoft YaHei", 10)
         self._font.setStyleHint(QFont.SansSerif)
 
+        # Border colour (festivals tint the bubble)
+        self._border_color = QColor(60, 60, 60)
+
+    def set_border_color(self, color):
+        """Tint the bubble outline; None restores the default dark grey."""
+        self._border_color = QColor(color) if color else QColor(60, 60, 60)
+        self.update()
+
     def show_text(self, text, duration=3000):
         """Show a speech bubble with the given text."""
         self.text = text
@@ -63,7 +71,7 @@ class BubbleWidget(QWidget):
         h = self.bubble_h
 
         # Bubble background (white with border)
-        painter.setPen(QPen(QColor(60, 60, 60), 2))
+        painter.setPen(QPen(self._border_color, 2))
         painter.setBrush(QBrush(QColor(255, 255, 255, 240)))
 
         # Draw rounded rectangle (pixel-style with sharp corners)
@@ -76,7 +84,7 @@ class BubbleWidget(QWidget):
             QPoint(tail_cx + 8, h + 5),
             QPoint(tail_cx, h + 5 + self.tail_h),
         ]
-        painter.setPen(QPen(QColor(60, 60, 60), 1))
+        painter.setPen(QPen(self._border_color, 1))
         painter.setBrush(QBrush(QColor(255, 255, 255, 240)))
         painter.drawPolygon(*tail_points)
 

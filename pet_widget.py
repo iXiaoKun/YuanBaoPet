@@ -7,20 +7,11 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import Qt, QTimer, QPoint
 from PyQt5.QtGui import QPainter, QPixmap
 
+from paths import sprite_search_dirs
+
 
 # Sprite directories to search (handles both dev and PyInstaller bundled mode)
-import sys as _sys
-if getattr(_sys, 'frozen', False):
-    # Running as PyInstaller bundle - sprites are in _MEIPASS/sprites
-    _BASE = _sys._MEIPASS
-else:
-    _BASE = os.path.dirname(os.path.abspath(__file__))
-
-SPRITE_SEARCH_DIRS = [
-    os.path.join(_BASE, "sprites"),
-    os.path.join(_BASE, ".."),  # parent dir (dev mode)
-    _BASE,
-]
+SPRITE_SEARCH_DIRS = sprite_search_dirs()
 
 
 class PetWidget(QWidget):
@@ -85,6 +76,42 @@ class PetWidget(QWidget):
         ox = (self.WIDGET_SIZE - self._sprite_scaled) // 2
         oy = (self.WIDGET_SIZE - self._sprite_scaled) // 2
         self._sprite_offset = QPoint(ox, oy)
+
+        # Vertical offset while the pet is picked up (long press)
+        self._lift = 0
+
+        # Annoyed shake animation offsets
+        self._shake_x = 0
+        self._shake_left = 0
+        self._shake_amp = 4
+        self._shake_timer = QTimer(self)
+        self._shake_timer.timeout.connect(self._on_shake_tick)
+
+    # ==============================================
+    # Hug / shake helpers
+    # ==============================================
+
+    def set_lift(self, lifted):
+        """Raise the sprite a little while being held."""
+        offset = -8 if lifted else 0
+        if offset != self._lift:
+            self._lift = offset
+            self.update()
+
+    def shake(self, ticks=8, amplitude=4, interval=45):
+        """Quick horizontal wobble used when the pet gets annoyed."""
+        self._shake_amp = amplitude
+        self._shake_left = ticks
+        self._shake_timer.start(interval)
+
+    def _on_shake_tick(self):
+        self._shake_left -= 1
+        if self._shake_left <= 0:
+            self._shake_timer.stop()
+            self._shake_x = 0
+        else:
+            self._shake_x = self._shake_amp if self._shake_left % 2 == 0 else -self._shake_amp
+        self.update()
 
     def _load_sprites(self):
         """Load all sprite PNG files. Auto-discovers frames by scanning files."""
@@ -162,11 +189,13 @@ class PetWidget(QWidget):
             return
 
         if self.parent():
-            pos = self.parent().pos()
-            self.parent().move(
-                pos.x() + int(self._walk_dx),
-                pos.y() + int(self._walk_dy)
-            )
+            step_x, step_y = int(self._walk_dx), int(self._walk_dy)
+            parent = self.parent()
+            if hasattr(parent, "move_by"):
+                parent.move_by(step_x, step_y)  # keeps the walk on screen
+            else:
+                pos = parent.pos()
+                parent.move(pos.x() + step_x, pos.y() + step_y)
 
         self._walk_steps -= 1
 
@@ -178,6 +207,10 @@ class PetWidget(QWidget):
 
         pixmap = self._sprites.get(self._sprite_key)
         if pixmap and not pixmap.isNull():
-            painter.drawPixmap(self._sprite_offset, pixmap)
+            offset = QPoint(
+                self._sprite_offset.x() + self._shake_x,
+                self._sprite_offset.y() + self._lift,
+            )
+            painter.drawPixmap(offset, pixmap)
 
         painter.end()
